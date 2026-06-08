@@ -118,6 +118,7 @@ class AnswerResult:
 class GraphState(TypedDict, total=False):
     query: str
     history: List[Dict[str, str]]            # [{role, content}, ...]
+    scope: List[str]                         # restrict to these lecture_ids (None/[] = all)
     candidates: List[str]                    # unit_ids from retrieve_candidates
     selected_units: List[str]                # unit_ids chosen by select_lectures
     worker_outputs: Annotated[List[Dict[str, Any]], operator.add]

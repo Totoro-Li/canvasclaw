@@ -96,6 +96,14 @@ with st.sidebar:
         else:
             st.success(f"LLM: {settings.LLM_MODEL}")
             st.caption("（端点未返回模型列表，使用 .env 配置）")
+    # scope: restrict Q&A to a subset of lectures (empty = all)
+    all_ids = [l["lecture_id"] for l in LECS]
+    scope_sel = st.multiselect(
+        "🎯 限定范围（留空 = 全部讲次）", all_ids,
+        default=st.session_state.get("scope_default", []),
+        format_func=lambda lid: f"{lid} · {(lec_by_id(lid).get('title') or '')[:12]}")
+    if scope_sel:
+        st.caption(f"已限定 {len(scope_sel)} 讲，范围外将如实回答“未找到”")
     st.markdown(f"**课程讲次（{len(LECS)} 节）**")
     for l in LECS:
         st.markdown(f"- `{l['lecture_id']}` {(l.get('title') or '')[:18]} · {len(units_of(l['lecture_id']))} 单元")
@@ -145,6 +153,15 @@ def render_citations(citations, msg_idx):
                 cols[1].image(str(fp), caption=f"slide {si}")
 
 
+def render_scope_miss(query, msg_idx):
+    """On a limited-scope miss, offer to re-run the same query over ALL lectures."""
+    st.caption("🔎 当前为限定范围检索，未命中。")
+    if st.button("🔍 在全部讲次中重新搜索", key=f"full_{msg_idx}"):
+        st.session_state["pending_q"] = query
+        st.session_state["force_full"] = True
+        st.rerun()
+
+
 if "msgs" not in st.session_state:
     st.session_state.msgs = []
 for idx, m in enumerate(st.session_state.msgs):
@@ -152,10 +169,14 @@ for idx, m in enumerate(st.session_state.msgs):
         st.markdown(m["content"])
         if m["role"] == "assistant" and m.get("citations"):
             render_citations(m["citations"], idx)
+        if m["role"] == "assistant" and m.get("scope_miss"):
+            render_scope_miss(m.get("query", ""), idx)
 
 q = st.chat_input("提问，例如：老师在哪节课讲了检索增强？短期记忆和长期记忆的区别是什么？")
 q = q or st.session_state.pop("pending_q", None)   # quick-action buttons feed in here
 if q:
+    _force_full = st.session_state.pop("force_full", False)   # "search full range" button
+    scope = None if (_force_full or not scope_sel) else scope_sel
     st.session_state.msgs.append({"role": "user", "content": q})
     with st.chat_message("user"):
         st.markdown(q)
@@ -165,7 +186,7 @@ if q:
         slot = st.empty()
         cc = load_engine()
         buf, citations = [], []
-        order, agents, collapsed = [], {}, False
+        order, agents, collapsed, scope_miss = [], {}, False, False
 
         def render_agents():
             n, done = len(order), sum(agents.values())
@@ -181,7 +202,7 @@ if q:
 
         history = [{"role": m["role"], "content": m["content"]}
                    for m in st.session_state.msgs[:-1][-6:]]   # prior turns only
-        for ev in cc.stream(q, history):
+        for ev in cc.stream(q, history, scope=scope):
             t = ev["type"]
             if t == "status":
                 status.write(f"**{ev['stage']}** — {ev['msg']}")
@@ -199,8 +220,12 @@ if q:
                 citations = ev["citations"]
             elif t == "done":
                 agents_slot.empty()
+                scope_miss = ev.get("scope_miss", False)
                 status.update(label="完成 ✓", state="complete", expanded=False)
         answer = "".join(buf)
         st.session_state.msgs.append(
-            {"role": "assistant", "content": answer, "citations": citations})
+            {"role": "assistant", "content": answer, "citations": citations,
+             "scope_miss": scope_miss, "query": q})
         render_citations(citations, len(st.session_state.msgs) - 1)
+        if scope_miss:
+            render_scope_miss(q, len(st.session_state.msgs) - 1)

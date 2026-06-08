@@ -87,15 +87,22 @@ class LectureIndex:
         a = settings.HYBRID_ALPHA
         return a * _minmax(vec) + (1 - a) * _minmax(bm)
 
-    def search_candidates(self, query: str, k: Optional[int] = None) -> List[Tuple[str, float]]:
-        """Rank UNITS (across all lectures) by best-matching chunk + title/summary hit."""
+    def search_candidates(self, query: str, k: Optional[int] = None,
+                          scope: Optional[List[str]] = None) -> List[Tuple[str, float]]:
+        """Rank UNITS by best-matching chunk + title/summary hit.
+        scope = list of lecture_ids to restrict to (None = all lectures)."""
         k = k or settings.CANDIDATE_TOP_K
+        sc = set(scope) if scope else None
         cs = self._chunk_scores(query)
         best: Dict[str, float] = {}
         for c, s in zip(self.chunks, cs):
+            if sc and c.get("lecture_id") not in sc:
+                continue
             best[c["unit_id"]] = max(best.get(c["unit_id"], 0.0), float(s))
         qt = set(_tok(query))
         for u in self.units:
+            if sc and u.get("lecture_id") not in sc:
+                continue
             hit = len(qt & set(_tok(u.get("title", "") + u.get("summary", "") + u.get("lecture_title", ""))))
             if hit:
                 best[u["unit_id"]] = best.get(u["unit_id"], 0.0) + 0.05 * hit

@@ -95,7 +95,8 @@ def locate_quote(quote: str, lo: float, hi: float, lecture_id: str = "L01"):
 # ---------------- node functions ----------------
 def retrieve_candidates_fn(state: GraphState) -> Dict[str, Any]:
     idx = get_index()
-    ranked = idx.search_candidates(ctx_query(state["query"], state.get("history")))
+    ranked = idx.search_candidates(ctx_query(state["query"], state.get("history")),
+                                   scope=state.get("scope"))
     return {"candidates": [uid for uid, _ in ranked],
             "meta": {**state.get("meta", {}), "candidate_scores": dict(ranked)}}
 
@@ -215,8 +216,11 @@ def aggregate_fn(state: GraphState) -> Dict[str, Any]:
     for w in found:
         cits.extend(w.get("citations", []))
     if not found:
-        return {"answer": "抱歉，在本课程已索引的讲次中没有找到与该问题直接相关的内容。",
-                "citations": [], "meta": {**state.get("meta", {}), "units_used": []}}
+        scoped = bool(state.get("scope"))
+        msg = ("在所选的限定范围内没有找到与该问题相关的内容（可在全部讲次中重新搜索）。"
+               if scoped else "抱歉，在本课程已索引的讲次中没有找到与该问题直接相关的内容。")
+        return {"answer": msg, "citations": [],
+                "meta": {**state.get("meta", {}), "units_used": [], "scope_miss": scoped}}
     answer = llm.chat(_aggregate_messages(state["query"], found, state.get("history")),
                       model=settings.LLM_MODEL)
     return {"answer": answer, "citations": cits,

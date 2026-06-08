@@ -38,20 +38,23 @@ class CanvasClaw:
         return self._app
 
     # ---- non-streaming (compiled LangGraph) ----
-    def answer(self, query: str, history: Optional[List[Dict[str, str]]] = None) -> AnswerResult:
-        state = self.app.invoke({"query": query, "history": history or []})
+    def answer(self, query: str, history: Optional[List[Dict[str, str]]] = None,
+               scope: Optional[List[str]] = None) -> AnswerResult:
+        state = self.app.invoke({"query": query, "history": history or [], "scope": scope or []})
         return _to_result(query, state)
 
     # ---- streaming (status + tokens) ----
     def stream(self, query: str,
-               history: Optional[List[Dict[str, str]]] = None) -> Iterator[Dict[str, Any]]:
+               history: Optional[List[Dict[str, str]]] = None,
+               scope: Optional[List[str]] = None) -> Iterator[Dict[str, Any]]:
         idx = self.index
         history = history or []
         cq = G.ctx_query(query, history)            # fold history in for follow-ups
-        ranked = idx.search_candidates(cq)
+        ranked = idx.search_candidates(cq, scope=scope)
         candidates = [u for u, _ in ranked]
+        scope_note = f"（限定范围 {len(scope)} 讲）" if scope else ""
         yield {"type": "status", "stage": "retrieve",
-               "msg": f"检索到 {len(candidates)} 个候选讲次", "candidates": candidates}
+               "msg": f"检索到 {len(candidates)} 个候选讲次{scope_note}", "candidates": candidates}
 
         sel = G.select_lectures_fn({"query": query, "candidates": candidates, "history": history})
         units = sel["selected_units"]
@@ -72,9 +75,12 @@ class CanvasClaw:
 
         found = [w for w in outs if w.found]
         if not found:
-            msg = "抱歉，在本课程已索引的讲次中没有找到与该问题直接相关的内容。"
+            scoped = bool(scope)
+            msg = ("在所选的限定范围内没有找到与该问题相关的内容。" if scoped
+                   else "抱歉，在本课程已索引的讲次中没有找到与该问题直接相关的内容。")
             yield {"type": "token", "text": msg}
-            yield {"type": "done", "result": AnswerResult(query=query, answer=msg).to_dict()}
+            yield {"type": "done", "scope_miss": scoped,
+                   "result": AnswerResult(query=query, answer=msg, meta={"scope_miss": scoped}).to_dict()}
             return
 
         cits: List[Dict[str, Any]] = []

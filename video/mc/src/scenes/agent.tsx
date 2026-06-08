@@ -51,7 +51,7 @@ export default makeScene2D(function* (view) {
 
   // ---------- 3. Retrieve: 26 lecture chips ----------
   const grid = createRef<Layout>();
-  view.add(<Layout ref={grid} layout gap={10} wrap={'wrap'} width={760} y={-110} x={300} alignItems={'center'} justifyContent={'center'}/>);
+  view.add(<Layout ref={grid} layout gap={10} wrap={'wrap'} width={900} y={-50} x={300} alignItems={'center'} justifyContent={'center'}/>);
   const chips: Rect[] = [];
   for (let i = 1; i <= 26; i++) {
     const r = createRef<Rect>();

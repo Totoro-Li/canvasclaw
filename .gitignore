@@ -30,3 +30,8 @@ video/rec/
 # ---- os ----
 .DS_Store
 Thumbs.db
+reports/*.pdf
+report_final.md
+reports/corrected.txt
+reports/v1.txt
+reports/小组贡献说明.md
