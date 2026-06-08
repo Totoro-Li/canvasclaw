@@ -1,0 +1,21 @@
+# CanvasClaw runtime dependencies.
+# torch: install the build matching your platform first, e.g.
+#   CUDA:    pip install torch torchvision   (from the right index)
+#   aarch64: pip install "torch==2.4.1" "transformers==4.46.3" "sentence-transformers==3.0.1"
+# torchvision is required because transformers lazily imports image processors under Streamlit.
+
+numpy<2
+torch
+torchvision
+sentence-transformers
+faster-whisper
+rank-bm25
+imagehash
+pillow
+streamlit
+langgraph
+openai
+imageio-ffmpeg
+
+# --- optional: demo media generation (screenshots / recording / video) ---
+# playwright   # + `playwright install chromium && playwright install-deps chromium`

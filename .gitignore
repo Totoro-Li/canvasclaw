@@ -1,0 +1,32 @@
+# ---- secrets (never publish) ----
+config/.env
+config/.env.*.bak
+*.bak
+
+# ---- python ----
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# ---- models / caches (multi-GB, redownloaded on first run) ----
+.hf_cache/
+*.bin
+*.safetensors
+*.onnx
+
+# ---- data & runtime artifacts (course content / derived; regenerate via ingest) ----
+data/
+logs/
+
+# ---- node / Motion Canvas build (regenerated) ----
+video/mc/node_modules/
+video/mc/output/
+video/rec/
+
+# keep the final demo media (video/*.mp4, video/shots/*.png) and Motion Canvas source
+
+# ---- os ----
+.DS_Store
+Thumbs.db

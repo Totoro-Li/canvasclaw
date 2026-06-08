@@ -1,0 +1,18 @@
+{
+  "name": "canvasclaw-explainer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "@motion-canvas/2d": "^3.17.2",
+    "@motion-canvas/core": "^3.17.2",
+    "@motion-canvas/ffmpeg": "^1.1.0",
+    "@motion-canvas/ui": "^3.17.2",
+    "@motion-canvas/vite-plugin": "^3.16.0",
+    "typescript": "^5.5.4",
+    "vite": "^4.5.5"
+  }
+}
